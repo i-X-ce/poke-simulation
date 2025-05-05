@@ -1,6 +1,7 @@
 # テンプレート
 from pyboy import PyBoy
 import os
+import signal
 
 os.chdir(os.path.dirname(__file__))
 
@@ -10,6 +11,14 @@ romPath = ""
 render = False
 # saveする場合はTrueにする
 save = True
+
+def signal_handler(sig, frame):
+    print("Exiting...")
+    pyboy.stop()
+    exit(0)
+
+# Ctrl+Cで終了するための処理
+signal.signal(signal.SIGINT, signal_handler)
 
 # 入力を受け付けたい場合はno_input=Falseにする
 pyboy = PyBoy(romPath, sound_volume=0, window="SDL2" if render else "null", no_input=True)
