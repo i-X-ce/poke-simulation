@@ -54,6 +54,7 @@ def wait_until(condition_fn, trigger=False):
         if (c and trigger) or ((not trigger) and (not c)):
             break
 
+STATES_TYPE = ("h", "a", "b", "s", "c")
 # ニドキングのステータス
 def nid_states(a, b, s, c): # 個体値とレベルを渡す
     lv = 25
@@ -99,16 +100,14 @@ for key in ACSet.keys():
 print(ACs)
 
 
-N = 200 if not record else 10 # 1サンプル当たりの試行回数
+N = 10000 if not record else 10 # 1サンプル当たりの試行回数
 result = []
 total = 3 * len(ACs["a"]) * len(ACs["c"]) 
 cnt = 0
 tqbar = tqdm([], position=0, bar_format="{desc}")
-with open("result.csv", "w", newline="") as csvfile:
-    csvwriter = csv.DictWriter(csvfile, fieldnames=["A", "B", "S", "C", "HP", "Win"])
-    csvwriter.writeheader()
 
-    def trial(h, a, b, s, c, HP):
+
+def trial(A, B, S, C, HP):
         global pyboy
         global cnt
         global frames
@@ -120,7 +119,7 @@ with open("result.csv", "w", newline="") as csvfile:
         win = 0
         frames = []
         # new_state = {"h": h, "a": a, "b": b, "s": s, "c": c}
-        new_state = [h, a, b, s, c]
+        new_state = nid_states(A, B, S, C)
         for i in range(N):
             if i % 500 == 0:
                 pyboy = reset_pyboy()
@@ -133,8 +132,8 @@ with open("result.csv", "w", newline="") as csvfile:
             for j in range(random.randrange(0, 5)):
                 pyboy.tick() # 乱数を進める
             
-            for (j, v) in enumerate(new_state):
-                pyboy.memory[0xd14d + j * 2 + 1] = v
+            for j, v in enumerate(STATES_TYPE):
+                pyboy.memory[0xd14d + j * 2 + 1] = new_state[v]
             # print([hex(x) for x in pyboy.memory[0xd14d:0xd14d + 10]])
             pyboy.memory[0xd12d] = HP
             event_01()
@@ -147,43 +146,49 @@ with open("result.csv", "w", newline="") as csvfile:
             print(len(frames))
         return win
 
-    for S in [10, 11, 15][::-1]:
-        for A in ACs["a"][::-1]:
-            for C in ACs["c"][::-1]:
-                state = nid_states(A, 8, S, C)
-                samples = []
-                for HP in range(40, state["h"] + 1)[::-1]:
-                    
-                    # for i in range(N):
-                    #     if i % 500 == 0:
-                    #         pyboy = reset_pyboy()
-                    #     with open(f"{romPath}.state", "rb") as f:
-                    #         pyboy.load_state(f)
-                    #     # pyboy.memory[0xff04] = random.randrange(0, 256)
-                    #     # print([hex(x) for x in pyboy.memory[0xd858:0xd858 + 4]])
+trial(0, 8, 15, 15, 83)
 
-                    #     # pyboy.memory[0xffd3] = random.randrange(0, 256)
-                    #     # pyboy.memory[0xffd4] = random.randrange(0, 256)
-                    #     # for j in range(random.randrange(0, 5)):
-                    #     #     pyboy.tick() # 乱数を進める
+# with open("result.csv", "w", newline="") as csvfile:
+#     csvwriter = csv.DictWriter(csvfile, fieldnames=["A", "B", "S", "C", "HP", "Win"])
+#     csvwriter.writeheader()
+
+#     for S in [10, 11, 15][::-1]:
+#         for A in ACs["a"][::-1]:
+#             for C in ACs["c"][::-1]:
+#                 state = nid_states(A, 8, S, C)
+#                 samples = []
+#                 for HP in range(40, state["h"] + 1)[::-1]:
+                    
+#                     # for i in range(N):
+#                     #     if i % 500 == 0:
+#                     #         pyboy = reset_pyboy()
+#                     #     with open(f"{romPath}.state", "rb") as f:
+#                     #         pyboy.load_state(f)
+#                     #     # pyboy.memory[0xff04] = random.randrange(0, 256)
+#                     #     # print([hex(x) for x in pyboy.memory[0xd858:0xd858 + 4]])
+
+#                     #     # pyboy.memory[0xffd3] = random.randrange(0, 256)
+#                     #     # pyboy.memory[0xffd4] = random.randrange(0, 256)
+#                     #     # for j in range(random.randrange(0, 5)):
+#                     #     #     pyboy.tick() # 乱数を進める
                         
-                    #     # for j, (k, v) in enumerate(state.items()):
-                    #     #     pyboy.memory[0xd14d + j * 2 + 1] = v
-                    #     # pyboy.memory[0xd12d] = HP
-                    #     # event_01()
-                    startTime = time.time()
-                    win = trial(state["h"], state["a"], state["b"], state["s"], state["c"], HP)
-                    endTime = time.time()
-                    print(f"\nA{A},B8,S{S},C{C},HP{HP}, win_rate:{100 * win / N}%, time:{endTime - startTime: 0.2f}s progress: {100 * (cnt / total + (HP - 40) / ((state['h'] - 40) * total)): .2f}%")
-                    csvwriter.writerow({"A": A, "B": 8, "S": S, "C": C, "HP": HP, "Win": win})
-                    csvfile.flush()
-                    if record:
-                        frames[0].save("output.gif", save_all=True, append_images=frames[1:], duration=1, loop=0)
-                        print(len(frames))
-                add = (f"A{A},B8,S{S},C{C}", samples)
-                result.append(add)
-                print(add)
-                cnt += 1
+#                     #     # for j, (k, v) in enumerate(state.items()):
+#                     #     #     pyboy.memory[0xd14d + j * 2 + 1] = v
+#                     #     # pyboy.memory[0xd12d] = HP
+#                     #     # event_01()
+#                     startTime = time.time()
+#                     win = trial(A, 8, S, C, HP)
+#                     endTime = time.time()
+#                     print(f"\nA{A},B8,S{S},C{C},HP{HP}, win_rate:{100 * win / N}%, time:{endTime - startTime: 0.2f}s progress: {100 * (cnt / total + (HP - 40) / ((state['h'] - 40) * total)): .2f}%")
+#                     csvwriter.writerow({"A": A, "B": 8, "S": S, "C": C, "HP": HP, "Win": win})
+#                     csvfile.flush()
+#                     if record:
+#                         frames[0].save("output.gif", save_all=True, append_images=frames[1:], duration=1, loop=0)
+#                         print(len(frames))
+#                 add = (f"A{A},B8,S{S},C{C}", samples)
+#                 result.append(add)
+#                 print(add)
+#                 cnt += 1
 
 # ステートを保存する場合はsave=Trueを指定する
 if save:
