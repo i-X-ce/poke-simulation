@@ -1,4 +1,4 @@
-# テンプレート
+# イシツブテ戦の勝率を調べる
 from multiprocessing import Pool
 import time
 from pyboy import PyBoy
@@ -9,7 +9,7 @@ import random
 from tqdm import tqdm
 import csv
 from io import BytesIO
-import logging # logging をインポート
+import logging 
 
 os.chdir(os.path.dirname(__file__))
 
@@ -26,7 +26,7 @@ save = False
 multi_thread = True
 
 # 1サンプル当たりの試行回数
-N = 200
+N = 100
 
 def signal_handler(sig, frame):
     print("Exiting...")
@@ -43,8 +43,8 @@ def init_pyboy():
             ret.set_emulation_speed(0)
             break
         except Exception as e:
-            # logging.error(f"Error initializing PyBoy: {e}", exc_info=True)
-            time.sleep(0.1)  
+            logging.error(f"Error initializing PyBoy: {e}", exc_info=True)
+            time.sleep(0.01)  
     return ret
 
 
@@ -154,7 +154,7 @@ def trial(A, B, HP, event_type):
         win = 0
         state = nid_states(A, B, 15, 15)
         # tqbar はマルチプロセスでは表示が乱れる可能性があるためコメントアウト推奨
-        # tqbar = tqdm([], position=0, bar_format="{desc}")
+        if not multi_thread: tqbar = tqdm([], position=0, bar_format="{desc}")
 
         with open(f"{romPath}.state", "rb") as f:
             state_data = f.read()
@@ -189,7 +189,7 @@ def trial(A, B, HP, event_type):
 
             if new_pyboy.memory[0xcffd] != 0:
                 win += 1
-            # if i % 10 == 0 and not multi_thread: tqbar.set_description(f"Type{event_type}, A{A}B{B}HP{HP}, win_rate: {win}/{i + 1} = {win / (i + 1) * 100:.2f}%")
+            if i % 10 == 0 and not multi_thread: tqbar.set_description(f"Type{event_type}, A{A}B{B}HP{HP}, win_rate: {win}/{i + 1} = {win / (i + 1) * 100:.2f}%")
 
         # logging.info(f"[PID:{process_id}] Finished trial: A={A}, B={B}, HP={HP}, event_type={event_type}, result={win}")
         new_pyboy.stop() # PyBoyインスタンスを停止
