@@ -26,7 +26,7 @@ save = False
 multi_thread = True
 
 # 1サンプル当たりの試行回数
-N = 100
+N = 200
 
 def signal_handler(sig, frame):
     print("Exiting...")
