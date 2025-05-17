@@ -25,7 +25,7 @@ render = False
 multi_process = True
 
 # 1サンプル当たりの試行回数
-N = 2
+N = 1000
 
 def signal_handler(sig, frame):
     print("Exiting...")
