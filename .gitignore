@@ -4,3 +4,4 @@
 *.ram
 *.state
 *.mp4
+src/python/ignore/
