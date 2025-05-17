@@ -221,7 +221,7 @@ total = len(ABs["a"]) * len(ABs["b"]) * 30 * 2 # A, B, HP, event_type
 
 if __name__ == "__main__":
     if multi_thread:
-        with open("result.csv", "w", newline="") as csvfile:
+        with open(f"result/result_{time.strftime('%Y%m%d_%H%M%S')}.csv", "w", newline="") as csvfile:
             print(ABs, flush=True)
             csvwriter = csv.DictWriter(csvfile, fieldnames=["Type", "A", "B", "HP", "Win"])
             csvwriter.writeheader()
