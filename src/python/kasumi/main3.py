@@ -1,5 +1,5 @@
 # カスミ勝率
-# マルチスレッドに対応
+# マルチプロセスに対応
 from multiprocessing import Pool
 import time
 from pyboy import PyBoy
@@ -21,11 +21,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(process)d - %(le
 romPath = "./pokemonBlue.gb"
 # 画面を表示させる場合はrender=Trueにする
 render = False
-# マルチスレッドで実行する場合はTrueにする
-multi_thread = True
+# マルチプロセスで実行する場合はTrueにする
+multi_process = True
 
 # 1サンプル当たりの試行回数
-N = 2000
+N = 2
 
 def signal_handler(sig, frame):
     print("Exiting...")
@@ -122,8 +122,8 @@ def trial(A, B, S, C, HP):
     return win, ret_HP
 
 def trial_wrapper(args):
-    A, B, S, C, HP = args
-    return trial(A, B, S, C, HP)
+    No, (A, B, S, C, HP) = args
+    return No, trial(A, B, S, C, HP)
 
 def result_rog(A, B, S, C, HP, progress, win):
     return f"\033[32mA{A}B{B}S{S}C{C}HP{HP}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%)\033[0m"
@@ -132,22 +132,24 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 if __name__ == "__main__":
-    csvfile = open(f"result_{time.time()}.csv", "w", newline="")
-    csvwriter = csv.DictWriter(csvfile, fieldnames=["A", "B", "S", "C", "HP", "Win"] + RHP_KEY)
+    csvfile = open(f"result/result_{time.strftime('%Y%m%d_%H%M%S')}.csv", "w", newline="")
+    csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win"] + RHP_KEY)
     csvwriter.writeheader()
 
     all_args = [(A, 8, S, C, HP) for A in ACs["a"] for S in [10, 11, 15] for C in ACs["c"] for HP in range(50, nid_states(A, 8, S, C)["h"] + 1)]
+    all_args = [(No, args) for No, args in enumerate(all_args)]
 
-    if multi_thread:
+    if multi_process:
         totalStartTime = time.time()
         logging.info(f"Total trials: {len(all_args)}")
         logging.info(f"Starting trials... ")
         try: 
             with Pool(initializer=init_worker) as pool:
                 results_iterator = pool.imap_unordered(trial_wrapper, all_args)
-                for i, result in enumerate(zip(all_args, results_iterator)):
-                    (A, B, S, C, HP), (win, hps) = result
-                    csvwriter.writerow({"A": A, "B": B, "S": S, "C": C, "HP": HP, "Win": win, **hps})
+                for i, result in enumerate(results_iterator):
+                    No, (win, hps) = result
+                    A, B, S, C, HP = all_args[No][1]
+                    csvwriter.writerow({"No": No, "A": A, "B": B, "S": S, "C": C, "HP": HP, "Win": win, **hps})
                     csvfile.flush()
                     logging.info(result_rog(A, B, S, C, HP, i, win))
                     # logging.info(f"Progress: {i + 1}/{len(all_args)} ({(i + 1) / len(all_args) * 100:.2f}%)")
