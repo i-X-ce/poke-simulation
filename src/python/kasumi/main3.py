@@ -33,7 +33,7 @@ def signal_handler(sig, frame):
     os._exit(0)
 
 # Ctrl+Cで終了するための処理
-signal.signal(signal.SIGINT, signal_handler)
+# signal.signal(signal.SIGINT, signal_handler)
 
 def init_pyboy():
     ret = PyBoy(romPath, sound_volume=0, window="SDL2" if render else "null", no_input=not render)
@@ -104,7 +104,7 @@ def trial(A, B, S, C, HP):
 
     win = 0
     ret_HP = {i: 0 for i in RHP_KEY}
-    for i in range(N):
+    for _ in range(N):
         pyboy.load_state(BytesIO(state_data))
 
         for j, v in enumerate(STATES_TYPE):
@@ -128,29 +128,41 @@ def trial_wrapper(args):
 def result_rog(A, B, S, C, HP, progress, win):
     return f"\033[32mA{A}B{B}S{S}C{C}HP{HP}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%)\033[0m"
 
-
-csvfile = open("output.csv", "w", newline="")
-csvwriter = csv.DictWriter(csvfile, fieldnames=["A", "B", "S", "C", "HP", "Win"] + RHP_KEY)
-csvwriter.writeheader()
-all_args = [(A, 8, S, C, HP) for A in ACs["a"] for S in [10, 11, 15] for C in ACs["c"] for HP in range(50, nid_states(A, 8, S, C)["h"] + 1)]
-logging.info(f"Total trials: {len(all_args)}")
+def init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 if __name__ == "__main__":
+    csvfile = open(f"result_{time.time()}.csv", "w", newline="")
+    csvwriter = csv.DictWriter(csvfile, fieldnames=["A", "B", "S", "C", "HP", "Win"] + RHP_KEY)
+    csvwriter.writeheader()
+
+    all_args = [(A, 8, S, C, HP) for A in ACs["a"] for S in [10, 11, 15] for C in ACs["c"] for HP in range(50, nid_states(A, 8, S, C)["h"] + 1)]
+
     if multi_thread:
         totalStartTime = time.time()
-        logging.info("Starting trials...")
-        with Pool() as pool:
-            results_iterator = pool.imap(trial_wrapper, all_args)
-            for i, result in enumerate(zip(all_args, results_iterator)):
-                (A, B, S, C, HP), (win, hps) = result
-                csvwriter.writerow({"A": A, "B": B, "S": S, "C": C, "HP": HP, "Win": win, **hps})
-                csvfile.flush()
-                logging.info(result_rog(A, B, S, C, HP, i, win))
-                # logging.info(f"Progress: {i + 1}/{len(all_args)} ({(i + 1) / len(all_args) * 100:.2f}%)")
+        logging.info(f"Total trials: {len(all_args)}")
+        logging.info(f"Starting trials... ")
+        try: 
+            with Pool(initializer=init_worker) as pool:
+                results_iterator = pool.imap_unordered(trial_wrapper, all_args)
+                for i, result in enumerate(zip(all_args, results_iterator)):
+                    (A, B, S, C, HP), (win, hps) = result
+                    csvwriter.writerow({"A": A, "B": B, "S": S, "C": C, "HP": HP, "Win": win, **hps})
+                    csvfile.flush()
+                    logging.info(result_rog(A, B, S, C, HP, i, win))
+                    # logging.info(f"Progress: {i + 1}/{len(all_args)} ({(i + 1) / len(all_args) * 100:.2f}%)")
+        except KeyboardInterrupt:
+            logging.warning("KeyboardInterrupt received. Terminating pool...")
+            pool.terminate()
+            pool.join()
+        else:
+            pool.close()
+            pool.join()
+        
         totalEndTime = time.time()
         logging.info(f"Total time: {totalEndTime - totalStartTime:.2f}s")
     else :
         win, hps = trial(15, 15, 15, 15, 83)
         csvwriter.writerow({"A": 15, "B": 15, "S": 15, "C": 15, "HP": 40, "Win": win, **hps})
-        
-csvfile.close()
+    
+    csvfile.close()
