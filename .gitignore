@@ -1,7 +1,9 @@
 *.gb
 *.gbc
+*.rtc
 *.sav
 *.ram
 *.state
 *.mp4
+.vscode
 src/python/ignore/
