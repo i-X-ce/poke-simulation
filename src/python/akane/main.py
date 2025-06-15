@@ -80,7 +80,7 @@ def IVs(state, min_IV, max_IV):
 
 
 MIN_HP = croconaw_states(0, 0, 0, 0)["h"] - 5 # 最小HP
-MAX_HP = croconaw_states(31, 31, 31, 31)["h"] # 最大HP
+MAX_HP = croconaw_states(15, 15, 15, 15)["h"] # 最大HP
 As = IVs("a", 5, 15) # 攻撃の個体値リスト
 Bs = IVs("b", 0, 15) # 防御の個体値リスト
 Cs = IVs("c", 6, 15) # 特殊の個体値リスト
@@ -92,7 +92,7 @@ def event(pyboy: PyBoy, type=0):
     def end_check():
         nonlocal end_type
         nonlocal frame_cnt
-        frame_cnt += 1
+
         if frame_cnt > 60 * 100: 
             end_type = -1 
             return True # 100秒経過した場合は強制終了
@@ -108,15 +108,20 @@ def event(pyboy: PyBoy, type=0):
         return end_type != 0
     
     def push_button(button):
+        nonlocal frame_cnt
         pyboy.button(button)
-        pyboy_tick(pyboy, random.randint(1, 5)) # ボタンを押してから1フレーム待機
+        addcnt = random.randint(1, 5)
+        frame_cnt += addcnt
+        pyboy_tick(pyboy, addcnt) # ボタンを押してから1フレーム待機
 
     # 操作と終了判定を行う関数
     # actions: (操作, 判定)のタプル
     def execute_actions(actions):
         for action, condition in actions:
             def wait_condition():
+                nonlocal frame_cnt
                 action()
+                frame_cnt += 1
                 return condition()
             wait_until(pyboy, wait_condition, True)
     
@@ -156,7 +161,7 @@ def event(pyboy: PyBoy, type=0):
         for _ in range(3 * 60):
             pyboy_tick(pyboy)
     
-    return end_type
+    return end_type, frame_cnt
 
 
 
@@ -167,6 +172,7 @@ def trial(A, B, S, C, HP, type=0):
         state_data = f.read()
     
     win = 0
+    total_frame_cnt = 0
     for _ in range(N):
         while True: 
             pyboy.load_state(BytesIO(state_data))
@@ -183,13 +189,14 @@ def trial(A, B, S, C, HP, type=0):
             pyboy.memory[0xffd4] = random.randrange(0, 256)
             for j in range(random.randint(1, 5)):
                 pyboy_tick(pyboy)
-            end_type = event(pyboy, type)
+            end_type, frame_cnt = event(pyboy, type)
             if end_type != -1:
                 if end_type == 1:
                     win += 1
+                    total_frame_cnt += frame_cnt
                 break
     pyboy.stop()
-    return win 
+    return win, total_frame_cnt
     
 
 
@@ -199,12 +206,13 @@ if __name__ == "__main__":
     csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win"])
     csvwriter.writeheader()
 
-
     if multi_process:
         pass
     else:
         totalStartTime = time.time()
         logging.info(f"Starting trials... ")
-        print(trial(15, 15, 15, 15, MAX_HP, 0))
+        win, frame = trial(15, 15, 15, 15, MAX_HP, 0)
+        print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / win:.2f} frames")
+
         totalEndTime = time.time()
         logging.info(f"Total time: {totalEndTime - totalStartTime:.2f}s")
