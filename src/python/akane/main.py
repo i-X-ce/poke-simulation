@@ -1,7 +1,7 @@
 import csv
 from io import BytesIO
 import logging
-import math
+from multiprocessing import Pool
 import os
 import random
 import signal
@@ -13,12 +13,12 @@ os.chdir(os.path.dirname(__file__))
 # logging の設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(process)d - %(levelname)s - %(message)s')
 
-romPath = "./pokemonGold.gb"
+rom_path = "./pokemonGold.gb"
 render = False
-multi_process = False # マルチプロセスで実行する場合はTrueにする
+multi_process = True # マルチプロセスで実行する場合はTrueにする
 
 # 1サンプル当たりの試行回数
-N = 100
+N = 2
 
 def signal_handler(signum, frame):
     print("Exiting...")
@@ -29,7 +29,7 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def init_pyboy():
-    ret = PyBoy(romPath, sound_volume=0, window="SDL2" if render else "null", no_input=not render)
+    ret = PyBoy(rom_path, sound_volume=0, window="SDL2" if render else "null", no_input=not render)
     ret.set_emulation_speed(2 if render else 0)
     return ret
 
@@ -163,12 +163,10 @@ def event(pyboy: PyBoy, type=0):
     
     return end_type, frame_cnt
 
-
-
 def trial(A, B, S, C, HP, type=0):
     pyboy = init_pyboy()
     croconaw_state = croconaw_states(A, B, S, C)
-    with open(f"{romPath}.state", "rb") as f:
+    with open(f"{rom_path}.state", "rb") as f:
         state_data = f.read()
     
     win = 0
@@ -187,27 +185,61 @@ def trial(A, B, S, C, HP, type=0):
 
             pyboy.memory[0xffd3] = random.randrange(0, 256) # 乱数初期化
             pyboy.memory[0xffd4] = random.randrange(0, 256)
-            for j in range(random.randint(1, 5)):
-                pyboy_tick(pyboy)
+            pyboy_tick(pyboy, random.randint(1, 5))
             end_type, frame_cnt = event(pyboy, type)
             if end_type != -1:
                 if end_type == 1:
                     win += 1
                     total_frame_cnt += frame_cnt
                 break
-    pyboy.stop()
     return win, total_frame_cnt
-    
 
+def result_rog(A, B, S, C, HP, type, progress, win, frame):
+    return logging.info(f"\033[32mA{A}B{B}S{S}C{C}H{HP}T{type}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%), frame: {frame}, ave_frame: {frame / max(1, win):.2f}\033[0m")
 
+def init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+def trial_wrapper(args):
+        No, (A, B, S, C, HP, type) = args
+        return No, trial(A, B, S, C, HP, type)
 
 if __name__ == "__main__":
     csvfile = open(f"result/result_{time.strftime('%Y%m%d_%H%M%S')}.csv", "w", newline="")
-    csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win"])
+    csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win", "Frame"])
     csvwriter.writeheader()
 
+    all_args = [(a, b, 5, c, hp, type) for type in range(2) for a in As for b in Bs for c in Cs for hp in range(MIN_HP, MAX_HP + 1)]
+    all_args = [(i, args) for i, args in enumerate(all_args)]
     if multi_process:
-        pass
+
+        totalStartTime = time.time()
+        logging.info(f"Total trials: {len(all_args)}")
+        logging.info(f"Starting trials... ")
+
+        try:
+            with Pool(initializer=init_worker) as pool:
+                results_iterator = pool.imap_unordered(trial_wrapper, all_args)
+                for i, result in enumerate(results_iterator):
+                    No, (win, frame) = result 
+                    A, B, S, C, HP, type = all_args[No][1]
+                    csvwriter.writerow({
+                        "No": No, "A": A, "B": B, "S": S, "C": C, "HP": HP, 
+                        "Win": win, "Frame": frame
+                    })
+                    csvfile.flush()
+                    result_rog(A, B, S, C, HP, type, i, win, frame)
+        except KeyboardInterrupt:
+            logging.warning("KeyboardInterrupt received. Terminating pool...")
+            pool.terminate()
+            pool.join()
+        else:
+            pool.close()
+            pool.join()
+        
+        totalEndTime = time.time()
+        logging.info(f"Total time: {totalEndTime - totalStartTime:.2f}s")
+        csvfile.close()
     else:
         totalStartTime = time.time()
         logging.info(f"Starting trials... ")
