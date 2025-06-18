@@ -14,8 +14,8 @@ os.chdir(os.path.dirname(__file__))
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(process)d - %(levelname)s - %(message)s')
 
 rom_path = "./pokemonGold.gb"
-render = True
-multi_process = False # マルチプロセスで実行する場合はTrueにする
+render = False
+multi_process = True # マルチプロセスで実行する場合はTrueにする
 
 # 1サンプル当たりの試行回数
 N = 1000
