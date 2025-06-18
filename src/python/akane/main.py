@@ -18,7 +18,7 @@ render = False
 multi_process = True # マルチプロセスで実行する場合はTrueにする
 
 # 1サンプル当たりの試行回数
-N = 1000
+N = 2
 
 def signal_handler(signum, frame):
     print("Exiting...")
@@ -202,7 +202,7 @@ def trial(A, B, S, C, HP, type=0):
     return win, total_frame_cnt
 
 def result_rog(A, B, S, C, HP, type, progress, win, frame):
-    return logging.info(f"\033[32mA{A}B{B}S{S}C{C}H{HP}T{type}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%), frame: {frame}, ave_frame: {frame / max(1, win):.2f}f\033[0m")
+    return logging.info(f"\033[32mT{type}A{A}B{B}S{S}C{C}H{HP}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%), frame: {frame}, ave_frame: {frame / max(1, win):.2f}f\033[0m")
 
 def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
     if multi_process:
         csvfile = open(f"result/result_{time.strftime('%Y%m%d_%H%M%S')}.csv", "w", newline="")
-        csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win", "Frame"])
+        csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "Type", "A", "B", "S", "C", "HP", "Win", "Frame"])
         csvwriter.writeheader()
 
         totalStartTime = time.time()
@@ -231,7 +231,7 @@ if __name__ == "__main__":
                     No, (win, frame) = result 
                     A, B, S, C, HP, type = all_args[No][1]
                     csvwriter.writerow({
-                        "No": No, "A": A, "B": B, "S": S, "C": C, "HP": HP, 
+                        "No": No, "Type": type, "A": A, "B": B, "S": S, "C": C, "HP": HP, 
                         "Win": win, "Frame": frame
                     })
                     csvfile.flush()
