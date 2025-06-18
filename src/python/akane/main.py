@@ -14,11 +14,11 @@ os.chdir(os.path.dirname(__file__))
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(process)d - %(levelname)s - %(message)s')
 
 rom_path = "./pokemonGold.gb"
-render = False
-multi_process = True # マルチプロセスで実行する場合はTrueにする
+render = True
+multi_process = False # マルチプロセスで実行する場合はTrueにする
 
 # 1サンプル当たりの試行回数
-N = 2
+N = 1000
 
 def signal_handler(signum, frame):
     print("Exiting...")
@@ -45,13 +45,13 @@ def wait_until(pyboy: PyBoy, condition_fn, trigger=False):
         if (c and trigger) or ((not trigger) and (not c)):
             break
 
+LV = 19 # レベル
 # アリゲイツのステータス
 def croconaw_states(a, b, s, c): # 個体値とレベルを渡す
-    lv = 19
     IV = (a, b, s, c) # 個体値
     base = (65, 80, 80, 58, 59, 63) # 種族値
     exp = (8, 9, 9, 8, 8, 9) # 努力レベル
-    return poke_states(lv, base, IV, exp)
+    return poke_states(LV, base, IV, exp)
 
 # ポケモンのステータス実数値
 # lv:レベル, base:種族値, IVs:個体値, exp:努力レベル
@@ -166,6 +166,7 @@ def event(pyboy: PyBoy, type=0):
 def trial(A, B, S, C, HP, type=0):
     pyboy = init_pyboy()
     croconaw_state = croconaw_states(A, B, S, C)
+    # print(croconaw_state)
     with open(f"{rom_path}.state", "rb") as f:
         state_data = f.read()
     
@@ -180,13 +181,19 @@ def trial(A, B, S, C, HP, type=0):
                 addr = START_ADDR + (j + 1) * 2
                 pyboy.memory[addr] = 0
                 pyboy.memory[addr + 1] = croconaw_state[v]
+                # print(f"{v}: {croconaw_state[v]}")
             pyboy.memory[START_ADDR] = 0
             pyboy.memory[START_ADDR + 1] = HP
+            pyboy.memory[0xda0f] = LV  
 
-            pyboy.memory[0xffd3] = random.randrange(0, 256) # 乱数初期化
-            pyboy.memory[0xffd4] = random.randrange(0, 256)
+            pyboy.memory[0xffe3] = random.randrange(0, 256) # 乱数初期化
+            pyboy.memory[0xffe4] = random.randrange(0, 256)
             pyboy_tick(pyboy, random.randint(1, 5))
             end_type, frame_cnt = event(pyboy, type)
+            if render:
+                print(f"calc: {croconaw_state}")
+                print(f"da14: {({x: pyboy.memory[0xda14 + i * 2 + 1] for i, x in enumerate(STATES_TYPE)})}")
+                print(f"cb14: {({x: pyboy.memory[0xcb14 + i * 2 + 1] for i, x in enumerate(STATES_TYPE)})}")
             if end_type != -1:
                 if end_type == 1:
                     win += 1
@@ -195,7 +202,7 @@ def trial(A, B, S, C, HP, type=0):
     return win, total_frame_cnt
 
 def result_rog(A, B, S, C, HP, type, progress, win, frame):
-    return logging.info(f"\033[32mA{A}B{B}S{S}C{C}H{HP}T{type}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%), frame: {frame}, ave_frame: {frame / max(1, win):.2f}\033[0m")
+    return logging.info(f"\033[32mA{A}B{B}S{S}C{C}H{HP}T{type}, win: {win}/{N} ({100 * win / N:.2f}%), progress: {progress + 1}/{len(all_args)} ({(progress + 1) / len(all_args) * 100:.2f}%), frame: {frame}, ave_frame: {frame / max(1, win):.2f}f\033[0m")
 
 def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -205,13 +212,13 @@ def trial_wrapper(args):
         return No, trial(A, B, S, C, HP, type)
 
 if __name__ == "__main__":
-    csvfile = open(f"result/result_{time.strftime('%Y%m%d_%H%M%S')}.csv", "w", newline="")
-    csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win", "Frame"])
-    csvwriter.writeheader()
-
     all_args = [(a, b, 5, c, hp, type) for type in range(2) for a in As for b in Bs for c in Cs for hp in range(MIN_HP, MAX_HP + 1)]
     all_args = [(i, args) for i, args in enumerate(all_args)]
+
     if multi_process:
+        csvfile = open(f"result/result_{time.strftime('%Y%m%d_%H%M%S')}.csv", "w", newline="")
+        csvwriter = csv.DictWriter(csvfile, fieldnames=["No", "A", "B", "S", "C", "HP", "Win", "Frame"])
+        csvwriter.writeheader()
 
         totalStartTime = time.time()
         logging.info(f"Total trials: {len(all_args)}")
@@ -243,8 +250,8 @@ if __name__ == "__main__":
     else:
         totalStartTime = time.time()
         logging.info(f"Starting trials... ")
-        win, frame = trial(15, 15, 15, 15, MAX_HP, 0)
-        print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / win:.2f} frames")
+        win, frame = trial(0, 0, 0, 0, MIN_HP, 1)
+        print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
 
         totalEndTime = time.time()
         logging.info(f"Total time: {totalEndTime - totalStartTime:.2f}s")
