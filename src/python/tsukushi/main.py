@@ -19,7 +19,7 @@ multi_process = True # マルチプロセスで実行する場合はTrueにす�
 log = False
 
 # 1サンプル当たりの試行回数
-N = 10
+N = 1000
 
 def signal_handler(signum, frame):
     print("Exiting...")
