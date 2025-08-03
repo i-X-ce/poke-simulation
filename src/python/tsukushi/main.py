@@ -47,7 +47,7 @@ def wait_until(pyboy: PyBoy, condition_fn, trigger=False):
             break
 
 LV = 16 # レベル
-# アリゲイツのステータス
+# ワニノコのステータス
 def totodile_states(a, b, s, c): # 個体値とレベルを渡す
     IV = (a, b, s, c) # 個体値
     base = (50, 65, 64, 43, 44, 48) # 種族値
@@ -108,7 +108,7 @@ def event(pyboy: PyBoy, type=0):
         # 相手のポケモンが全滅した場合勝利
         if sum([pyboy.memory[0xdcf0 + x * 48] * 256 + pyboy.memory[0xdcf1 + x * 48] for x in range(6)]) == 0:
             end_type = 1
-        # アリゲイツのHPが0になった場合敗北
+        # ワニノコのHPが0になった場合敗北
         if pyboy.memory[0xcb13] + pyboy.memory[0xcb14] == 0:
             end_type = 2
         return end_type != 0
@@ -137,7 +137,12 @@ def event(pyboy: PyBoy, type=0):
         # プラスパワーを使用
         def condition():
             push_button("a")
-            return (pyboy.memory[0xcb9e] == 0x08 and pyboy.memory[0xc4c6] == 0xed) or end_check()
+            return pyboy.memory[0xcb9e] == 0x08 or end_check()
+        wait_until(pyboy, condition, True)
+        # メニューに戻る
+        def condition():
+            push_button("b")
+            return pyboy.memory[0xcf15] == 0x02 or end_check()
         wait_until(pyboy, condition, True)
         # カーソルを左に
         def condition():
@@ -258,8 +263,12 @@ if __name__ == "__main__":
     else:
         totalStartTime = time.time()
         logging.info(f"Starting trials... ")
-        win, frame = trial(2, 1, MIN_HP, type=0)
-        print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
+        
+        # win, frame = trial(15, 15, MIN_HP, type=0)
+        # print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
 
+        win, frame = trial(15, 15, MIN_HP, type=1)
+        print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
+        
         totalEndTime = time.time()
         logging.info(f"Total time: {totalEndTime - totalStartTime:.2f}s")
