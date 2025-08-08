@@ -165,7 +165,7 @@ def event(pyboy: PyBoy, type=0):
     
     return end_type, frame_cnt
 
-def trial(A, B, HP, S=9, C=9, type=0):
+def trial(A, B, HP, type, S=9, C=9):
     pyboy = init_pyboy()
     croconaw_state = totodile_states(A, B, S, C)
     # print(croconaw_state)
@@ -221,7 +221,7 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def trial_wrapper(args):
-        No, (A, B,HP, type) = args
+        No, (A, B, HP, type) = args
         return No, trial(A, B, HP, type)
 
 if __name__ == "__main__":
@@ -264,8 +264,8 @@ if __name__ == "__main__":
         totalStartTime = time.time()
         logging.info(f"Starting trials... ")
         
-        # win, frame = trial(15, 15, MIN_HP, type=0)
-        # print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
+        win, frame = trial(15, 15, MIN_HP, type=0)
+        print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
 
         win, frame = trial(15, 15, MIN_HP, type=1)
         print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
