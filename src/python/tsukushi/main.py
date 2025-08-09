@@ -264,10 +264,12 @@ if __name__ == "__main__":
         totalStartTime = time.time()
         logging.info(f"Starting trials... ")
         
-        win, frame = trial(15, 15, MIN_HP, type=0)
+        test_a, test_b, test_HP = 15, 15, MAX_HP
+
+        win, frame = trial(test_a, test_b, test_HP, type=0)
         print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
 
-        win, frame = trial(15, 15, MIN_HP, type=1)
+        win, frame = trial(test_a, test_b, test_HP, type=1)
         print(f"win:{win}/{N}, frame:{frame}, average frame: {frame / max(1, win):.2f} frames")
         
         totalEndTime = time.time()
