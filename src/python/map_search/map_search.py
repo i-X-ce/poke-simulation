@@ -63,7 +63,7 @@ class MapSearch:
         # つながったマップデータの読み込み
         connection_maps = []
         for i in range(4):
-            if map_connections & (1 << i):
+            if map_connections & (1 << (3 - i)):
                 connection_data = read_bytes(self.rom_data, map_header, 11)
                 connection_maps.append(ConnectionMapData(self, connection_data))
                 map_header += 11
@@ -94,7 +94,8 @@ class MapSearch:
 
             for ci in range(3):
                 for cj in range(connection_map.strip_length):
-                    if i >= 2:
+                    # print(f"i: {i}, map_id: {connection_map.map_id:02X}, diff: {diff}, h: {self.over_world_map_height}, w: {self.over_world_map_width}, y: {y}, x: {x}, ci: {ci}, cj: {cj}")
+                    if i < 2:
                         over_world_map[y + ci][x + cj] = read_byte(self.rom_data, connection_map.strip_src + ci * connection_map.strip_length + cj)
                     else:
                         over_world_map[y + cj][x + ci] = read_byte(self.rom_data, connection_map.strip_src + cj * connection_map.strip_length + ci)
@@ -139,11 +140,12 @@ class MapSearch:
                 if open_menu:
                     slice_tile[0:16, -8:] = 0x7f
                 if search_func(slice_tile):
+                    my = (y - 6) // 2 + 1
+                    mx = (x - 6) // 2 + 1
+                    hits.append((my, mx, get_tile_func(slice_tile)))
                     if print_info:
                         print(slice_tile)
-                    my = (y - 6) // 2 
-                    mx = (x - 6) // 2 
-                    hits.append((mx, my, get_tile_func(slice_tile)))
+                        print(f"Hit at Y: {my:02X}, X: {mx:02X}, Value: {hits[-1][2]:02X}")
         return hits
 
 
