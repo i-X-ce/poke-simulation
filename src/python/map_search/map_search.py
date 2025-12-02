@@ -96,9 +96,9 @@ class MapSearch:
                 for cj in range(connection_map.strip_length):
                     # print(f"i: {i}, map_id: {connection_map.map_id:02X}, diff: {diff}, h: {self.over_world_map_height}, w: {self.over_world_map_width}, y: {y}, x: {x}, ci: {ci}, cj: {cj}")
                     if i < 2:
-                        over_world_map[y + ci][x + cj] = read_byte(self.rom_data, connection_map.strip_src + ci * connection_map.strip_length + cj)
+                        over_world_map[y + ci][x + cj] = read_byte(self.rom_data, connection_map.strip_src + ci * connection_map.map_width + cj)
                     else:
-                        over_world_map[y + cj][x + ci] = read_byte(self.rom_data, connection_map.strip_src + cj * connection_map.strip_length + ci)
+                        over_world_map[y + cj][x + ci] = read_byte(self.rom_data, connection_map.strip_src + cj * connection_map.map_width + ci)
 
         tile_array = [[0 for _ in range(self.over_world_map_width * 4)] for _ in range(self.over_world_map_height * 4)]
         tile_sets_addr = self.map_data_table.tile_sets + map_tile_set * 12
@@ -116,6 +116,7 @@ class MapSearch:
                         tile_array[y * 4 + ty][x * 4 + tx] = read_byte(self.rom_data, block_addr + ty * 4 + tx)
     
         if print_info: 
+            print(f"connection_maps: {connection_maps}")
             for i, row in enumerate(over_world_map):
                 print(f"{MapSearch.OVER_WORLD_MAP_ADDR + i * self.over_world_map_width:06X} ", end="")
                 for block in row:
