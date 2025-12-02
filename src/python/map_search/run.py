@@ -22,7 +22,7 @@ def save_csv(hits, filename: str):
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(__file__))
-    map_search = MapSearch("../../ROM/pokemonGreen1.1.gb")
+    map_search = MapSearch("../../ROM/pokemonGreen1.0.gb")
 
     # 釣り検索
     def fishing_search(tile_array):
@@ -60,10 +60,8 @@ if __name__ == "__main__":
             continue
         print(f"Searching map ID: {i:02X}...")
         map_search.draw_map_array(i)
-        result = map_search.search_data(new_bug_search, new_bug_get_tile, print_info=i==0x01)
+        result = map_search.search_data(new_bug_search, new_bug_get_tile, print_info=False)
         if result:
             result = [(i, y, x, value) for (y, x, value) in result]
         hits += result
-        if i == 0x01:
-            print(len(result))
     save_csv(hits, "new_bug_map_search_results.csv")
