@@ -1,4 +1,5 @@
 import csv
+import datetime
 import os
 
 from map_search import MapSearch
@@ -22,7 +23,7 @@ def save_csv(hits, filename: str):
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(__file__))
-    map_search = MapSearch("../../ROM/pokemonGreen1.0.gb")
+    map_search = MapSearch("../../ROM/pokemonBlue.gb")
 
     # 釣り検索
     def fishing_search(tile_array):
@@ -43,7 +44,7 @@ if __name__ == "__main__":
         if result:
             result = [(i, y, x, value) for (y, x, value) in result]
         hits += result
-    save_csv(hits, "fishing_map_search_results.csv")
+    save_csv(hits, f"fishing_map_search_results_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
 
     # 新バグ検索
     def new_bug_search(tile_array):
@@ -64,4 +65,4 @@ if __name__ == "__main__":
         if result:
             result = [(i, y, x, value) for (y, x, value) in result]
         hits += result
-    save_csv(hits, "new_bug_map_search_results.csv")
+    save_csv(hits, f"new_bug_map_search_results_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
