@@ -1,6 +1,7 @@
 from collections import deque
 import math
 import random
+import matplotlib.pyplot as plt
 
 def get_total_steps(operations, target_byte):
     """
@@ -32,7 +33,7 @@ def get_total_steps(operations, target_byte):
     
     return sum(costs[t] for t in target_byte), histories
 
-def simulated_annealing(target_bytes, print_progress=True):
+def simulated_annealing(target_bytes, print_progress=True, track_history=False, show_plot=False):
     T = 1000 # 初期温度
     T_min = .1 # 最低温度
     cooling_rate = 0.9995 # 冷却率
@@ -50,6 +51,9 @@ def simulated_annealing(target_bytes, print_progress=True):
             if arr[i] == arr[i + 1]:
                 return False
         return True
+
+    track_history = track_history or show_plot
+    trace = [] if track_history else None  # (step, T, current_energy, best_energy)
 
     current_solution = []
     while True:
@@ -116,59 +120,87 @@ def simulated_annealing(target_bytes, print_progress=True):
                     print(f"Step {step}: 更新 {new_solution + fixed_operations} Energy: {best_energy} T: {T:.2f}")
                     print("\033[0m", end="")
 
+        if trace is not None:
+            trace.append((step, T, current_energy, best_energy))
+
         T *= cooling_rate
         step += 1
+
+    if show_plot:
+        steps = [t[0] for t in trace]
+        temps = [t[1] for t in trace]
+        currents = [t[2] for t in trace]
+        bests = [t[3] for t in trace]
+
+        fig, ax1 = plt.subplots()
+        ax1.plot(steps, currents, label="current energy", alpha=0.5)
+        ax1.plot(steps, bests, label="best energy", linewidth=2)
+        ax1.set_xlabel("Step")
+        ax1.set_ylabel("Energy")
+        ax1.legend(loc="upper right")
+
+        ax2 = ax1.twinx()
+        ax2.plot(steps, temps, label="temperature", color="tab:orange", alpha=0.3)
+        ax2.set_ylabel("Temperature")
+        ax2.legend(loc="upper left")
+
+        fig.suptitle("Simulated Annealing Progress")
+        fig.tight_layout()
+        plt.show()
+
+    if track_history:
+        return best_solution + fixed_operations, best_energy, trace
     return best_solution + fixed_operations, best_energy
 
 BINARY_DATA = [
-                                                          0xCD, 0x3F, 0x38, 0xF0, 0xB3, 0x01, 0x01,
-    0x00, 0x07, 0x38, 0x18, 0x0B, 0x0B, 0x07, 0x38, 0x13, 0x0E, 0xF0, 0x07, 0x38, 0x0E, 0x01, 0x10,
-    0x00, 0x07, 0x38, 0x08, 0x07, 0x38, 0x03, 0x07, 0xD0, 0xE9, 0xE1, 0xC9, 0x79, 0xCB, 0x43, 0x20,
-    0x06, 0xCB, 0x4B, 0x20, 0x05, 0x09, 0xC9, 0x86, 0x77, 0xC9, 0x84, 0x67, 0xC9, 0xF5, 0xCB, 0x37,
-    0xCD, 0x24, 0xD6, 0xF1, 0xE6, 0x0F, 0xC6, 0xF6, 0xF6, 0x60, 0x22, 0xC9, 0x21, 0x00, 0xD0, 0xCD,
-    0xE9, 0xD5, 0xE5, 0x11, 0xF8, 0xFF, 0x19, 0xE5, 0xD1, 0x21, 0xAB, 0xC3, 0x01, 0x0C, 0x00, 0x36,
-    0x7C, 0x23, 0x7A, 0xCD, 0x1D, 0xD6, 0x7B, 0xCD, 0x1D, 0xD6, 0x36, 0x7F, 0x23, 0x1A, 0xCD, 0x1D,
-    0xD6, 0x13, 0x36, 0x7C, 0x09, 0x7C, 0xFE, 0xC5, 0x20, 0xE5, 0x3E, 0xED, 0xEA, 0x4B, 0xC4, 0xE1,
-    0x18, 0xCD
+                                                      0xCD, 0x3F, 0x38, 0xF0, 0xB3, 0x01, 0x01,
+0x00, 0x07, 0x38, 0x18, 0x0B, 0x0B, 0x07, 0x38, 0x13, 0x0E, 0xF0, 0x07, 0x38, 0x0E, 0x01, 0x10,
+0x00, 0x07, 0x38, 0x08, 0x07, 0x38, 0x03, 0x07, 0xD0, 0xE9, 0xE1, 0xC9, 0x79, 0xCB, 0x43, 0x20,
+0x06, 0xCB, 0x4B, 0x20, 0x05, 0x09, 0xC9, 0x86, 0x77, 0xC9, 0x84, 0x67, 0xC9, 0xF5, 0xCB, 0x37,
+0xCD, 0x24, 0xD6, 0xF1, 0xE6, 0x0F, 0xC6, 0xF6, 0xF6, 0x60, 0x22, 0xC9, 0x21, 0x00, 0xD0, 0xCD,
+0xE9, 0xD5, 0xE5, 0x11, 0xF8, 0xFF, 0x19, 0xE5, 0xD1, 0x21, 0xAB, 0xC3, 0x01, 0x0C, 0x00, 0x36,
+0x7C, 0x23, 0x7A, 0xCD, 0x1D, 0xD6, 0x7B, 0xCD, 0x1D, 0xD6, 0x36, 0x7F, 0x23, 0x1A, 0xCD, 0x1D,
+0xD6, 0x13, 0x36, 0x7C, 0x09, 0x7C, 0xFE, 0xC5, 0x20, 0xE5, 0x3E, 0xED, 0xEA, 0x4B, 0xC4, 0xE1,
+0x18, 0xCD
 ]
 
 if __name__ == "__main__":
     
-    # target_bytes = BINARY_DATA
-    # final_solution, final_score = simulated_annealing(target_bytes)
-
-    # print("-----")
-    # step, histories = get_total_steps(final_solution, target_bytes)
-    # for t in BINARY_DATA:
-    #     print(f"byte {t:02X}: 操作履歴 {histories[t]}")
-    # sum_steps = sum(len(histories[t]) for t in BINARY_DATA)
-    # print(f"総操作数: {sum_steps} 平均操作数: {sum_steps / len(BINARY_DATA):.2f}")
-
-    # print("-----")
-    # print(f"最終結果: {final_solution}")
-    # print(f"最終操作数: {final_score}")
-
     target_bytes = BINARY_DATA
-    N = 100
+    final_solution, final_score, trace = simulated_annealing(target_bytes, track_history=True, show_plot=True)
 
-    print("---計測開始---")
-    results = []
-    for i in range(N):
-        final_solution, final_score = simulated_annealing(target_bytes, print_progress=False)
-        results.append((final_solution, final_score))
-        print(f"試行 {i+1}/{N} 完了 最終操作数: {final_score} 操作: {final_solution}")
+    print("-----")
+    step, histories = get_total_steps(final_solution, target_bytes)
+    for t in BINARY_DATA:
+        print(f"byte {t:02X}: 操作履歴 {histories[t]}")
+    sum_steps = sum(len(histories[t]) for t in BINARY_DATA)
+    print(f"総操作数: {sum_steps} 平均操作数: {sum_steps / len(BINARY_DATA):.2f}")
+
+    print("-----")
+    print(f"最終結果: {final_solution}")
+    print(f"最終操作数: {final_score}")
+
+    # target_bytes = BINARY_DATA
+    # N = 100
+
+    # print("---計測開始---")
+    # results = []
+    # for i in range(N):
+    #     final_solution, final_score = simulated_annealing(target_bytes, print_progress=False)
+    #     results.append((final_solution, final_score))
+    #     print(f"試行 {i+1}/{N} 完了 最終操作数: {final_score} 操作: {final_solution}")
     
-    scores = [res[1] for res in results]
-    sum_score = sum(scores)
-    avg_score = sum_score / len(scores)
-    max_score = max(scores)
-    min_score = min(scores)
-    median_score = sorted(scores)[len(results)//2]
-    print(f"平均操作数: {avg_score:.2f} 最大操作数: {max_score} 最小操作数: {min_score} 中央操作数: {median_score}")
+    # scores = [res[1] for res in results]
+    # sum_score = sum(scores)
+    # avg_score = sum_score / len(scores)
+    # max_score = max(scores)
+    # min_score = min(scores)
+    # median_score = sorted(scores)[len(results)//2]
+    # print(f"平均操作数: {avg_score:.2f} 最大操作数: {max_score} 最小操作数: {min_score} 中央操作数: {median_score}")
 
-    results.sort(key=lambda x: x[1])
-    for res in results[:3]:
-        print(f"操作: {res[0]} 最終操作数: {res[1]}")
+    # results.sort(key=lambda x: x[1])
+    # for res in results[:10]:
+    #     print(f"操作: {res[0]} 最終操作数: {res[1]}")
 
 
 # [-2, 7, 34, -51, 28, -55]
@@ -187,6 +219,9 @@ if __name__ == "__main__":
 
 # 最終結果: [1, 32, 62, 201, 213, 248]
 # 最終操作数: 337
+
+# 最終結果: [4, 7, 24, 25, 201, 233] 
+# 最終操作数: 336
 
 # 最終結果: [3, 11, 56, 205, 229, 254]
 # 最終操作数: 335
