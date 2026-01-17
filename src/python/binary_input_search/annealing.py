@@ -32,7 +32,7 @@ def get_total_steps(operations, target_byte):
     
     return sum(costs[t] for t in target_byte), histories
 
-def simulated_annealing(target_bytes):
+def simulated_annealing(target_bytes, print_progress=True):
     T = 1000 # 初期温度
     T_min = .1 # 最低温度
     cooling_rate = 0.9995 # 冷却率
@@ -110,16 +110,18 @@ def simulated_annealing(target_bytes):
             if new_energy < best_energy:
                 best_solution = new_solution
                 best_energy = new_energy
-                print("\033[33m", end="")
-                print(f"Step {step}: 更新 {new_solution + fixed_operations} Energy: {best_energy} T: {T:.2f}")
-                print("\033[0m", end="")
+
+                if print_progress:
+                    print("\033[33m", end="")
+                    print(f"Step {step}: 更新 {new_solution + fixed_operations} Energy: {best_energy} T: {T:.2f}")
+                    print("\033[0m", end="")
 
         T *= cooling_rate
         step += 1
     return best_solution + fixed_operations, best_energy
 
 BINARY_DATA = [
-                                                          0xCD, 0x67, 0x38, 0xF0, 0xB3, 0x01, 0x01,
+                                                          0xCD, 0x3F, 0x38, 0xF0, 0xB3, 0x01, 0x01,
     0x00, 0x07, 0x38, 0x18, 0x0B, 0x0B, 0x07, 0x38, 0x13, 0x0E, 0xF0, 0x07, 0x38, 0x0E, 0x01, 0x10,
     0x00, 0x07, 0x38, 0x08, 0x07, 0x38, 0x03, 0x07, 0xD0, 0xE9, 0xE1, 0xC9, 0x79, 0xCB, 0x43, 0x20,
     0x06, 0xCB, 0x4B, 0x20, 0x05, 0x09, 0xC9, 0x86, 0x77, 0xC9, 0x84, 0x67, 0xC9, 0xF5, 0xCB, 0x37,
@@ -132,22 +134,41 @@ BINARY_DATA = [
 
 if __name__ == "__main__":
     
+    # target_bytes = BINARY_DATA
+    # final_solution, final_score = simulated_annealing(target_bytes)
+
+    # print("-----")
+    # step, histories = get_total_steps(final_solution, target_bytes)
+    # for t in BINARY_DATA:
+    #     print(f"byte {t:02X}: 操作履歴 {histories[t]}")
+    # sum_steps = sum(len(histories[t]) for t in BINARY_DATA)
+    # print(f"総操作数: {sum_steps} 平均操作数: {sum_steps / len(BINARY_DATA):.2f}")
+
+    # print("-----")
+    # print(f"最終結果: {final_solution}")
+    # print(f"最終操作数: {final_score}")
+
     target_bytes = BINARY_DATA
-    final_solution, final_score = simulated_annealing(target_bytes)
+    N = 100
 
-    print("-----")
-    step, histories = get_total_steps(final_solution, target_bytes)
-    for t in BINARY_DATA:
-        print(f"byte {t:02X}: 操作履歴 {histories[t]}")
-    sum_steps = sum(len(histories[t]) for t in BINARY_DATA)
-    print(f"総操作数: {sum_steps} 平均操作数: {sum_steps / len(BINARY_DATA):.2f}")
-
-    print("-----")
-    print(f"最終結果: {final_solution}")
-    print(f"最終操作数: {final_score}")
-
+    print("---計測開始---")
+    results = []
+    for i in range(N):
+        final_solution, final_score = simulated_annealing(target_bytes, print_progress=False)
+        results.append((final_solution, final_score))
+        print(f"試行 {i+1}/{N} 完了 最終操作数: {final_score} 操作: {final_solution}")
     
+    scores = [res[1] for res in results]
+    sum_score = sum(scores)
+    avg_score = sum_score / len(scores)
+    max_score = max(scores)
+    min_score = min(scores)
+    median_score = sorted(scores)[len(results)//2]
+    print(f"平均操作数: {avg_score:.2f} 最大操作数: {max_score} 最小操作数: {min_score} 中央操作数: {median_score}")
 
+    results.sort(key=lambda x: x[1])
+    for res in results[:3]:
+        print(f"操作: {res[0]} 最終操作数: {res[1]}")
 
 
 # [-2, 7, 34, -51, 28, -55]
@@ -172,3 +193,6 @@ if __name__ == "__main__":
 
 # 最終結果: [1, 7, 19, 28, 117, 201, 205, 246]
 # 最終操作数: 288
+
+# 最終結果: [7, 25, 33, 56, 201, 205, 229, 240]
+# 最終操作数: 280
